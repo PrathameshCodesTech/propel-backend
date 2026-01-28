@@ -17,29 +17,46 @@ from django.conf import settings
 
 def get_org(request):
     """
-    Hybrid approach to get organization:
-    1. Try authenticated user's employee profile
-    2. Try org_code query parameter (for development/testing)
-    3. Fall back to first organization if DEBUG=True
+    Multi-tenant org resolution:
+    1. Authenticated user with employee_profile.organization → use that (org admin sees only their org).
+    2. Staff/superuser with org_code in query → use that org (admin override for upload/testing).
+    3. Unauthenticated: org_code from query (dev/testing).
+    4. DEBUG: fallback to first organization.
     """
-    # First, try authenticated user's employee profile
-    emp = getattr(request.user, "employee_profile", None)
-    if emp and emp.organization:
-        return emp.organization
-    
-    # Second, try org_code query parameter (useful for development/testing)
+    # 1) Authenticated user: prefer their org (org admin sees only their data)
+    if getattr(request.user, "is_authenticated", False):
+        emp = getattr(request.user, "employee_profile", None)
+        if emp and emp.organization:
+            # Staff can override via org_code (e.g. for upload or viewing another org)
+            if request.user.is_staff:
+                org_code = request.query_params.get("org_code")
+                if org_code:
+                    org = Organization.objects.filter(code=org_code).first()
+                    if org:
+                        return org
+            return emp.organization
+        # Authenticated but no employee profile: staff can still use org_code
+        if request.user.is_staff:
+            org_code = request.query_params.get("org_code")
+            if org_code:
+                org = Organization.objects.filter(code=org_code).first()
+                if org:
+                    return org
+        return None
+
+    # 2) Not authenticated: org_code from query (dev/testing, current frontend behavior)
     org_code = request.query_params.get("org_code")
     if org_code:
         org = Organization.objects.filter(code=org_code).first()
         if org:
             return org
-    
-    # Third, fallback to first organization if DEBUG mode (development only)
+
+    # 3) DEBUG fallback
     if settings.DEBUG:
         org = Organization.objects.first()
         if org:
             return org
-    
+
     return None
 
 

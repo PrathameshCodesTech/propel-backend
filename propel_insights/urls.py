@@ -20,9 +20,17 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.urls import path, include
 
+from core.api_views import MeAPIView, CsrfAPIView, ExcelUploadAPIView
+from core.auth_views import LoginAPIView, LogoutAPIView
+
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path("api/auth/login/", LoginAPIView.as_view(), name="api-login"),
+    path("api/auth/logout/", LogoutAPIView.as_view(), name="api-logout"),
+    path("api/csrf/", CsrfAPIView.as_view(), name="api-csrf"),
+    path("api/me/", MeAPIView.as_view(), name="api-me"),
+    path("api/admin/upload-excel/", ExcelUploadAPIView.as_view(), name="api-upload-excel"),
     path("api/analytics/", include("analytics.urls")),
     path("api/crm/", include("crm.urls")),
 ]
