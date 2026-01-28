@@ -1,0 +1,6 @@
+#modal-overlay {
+    background: transparent !important;
+    background-color: transparent !important;
+    opacity: 0 !important;
+    backdrop-filter: none !important;
+}
