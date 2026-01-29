@@ -252,7 +252,7 @@ class CustomerExperienceAPIView(APIView):
                 "id": customer.customer_code,
                 "name": customer.name,
                 "project": customer.project.name if customer.project else "N/A",
-                "unit": customer.unit.unit_code if customer.unit else "N/A",
+                "unit": customer.unit.unit_number if customer.unit else "N/A",
                 "satisfaction_score": float(customer.satisfaction_score_cached),
                 "status": customer.status,
                 "risk_level": risk_level,

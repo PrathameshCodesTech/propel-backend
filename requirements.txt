@@ -3,3 +3,5 @@ djangorestframework
 django-unfold[all]
 django-cors-headers
 openpyxl
+google-generativeai
+python-dotenv

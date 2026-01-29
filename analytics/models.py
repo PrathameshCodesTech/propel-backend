@@ -202,3 +202,28 @@ class ProjectMonthlySnapshot(TimeStampedModel):
         unique_together = [("project", "year", "month")]
         ordering = ["-year", "-month"]
         indexes = [models.Index(fields=["organization", "year", "month"])]
+
+
+class FieldCatalog(TimeStampedModel):
+    """
+    Semantic allowlist for AI analytics queries.
+    Maps natural language field names to Django ORM paths.
+    Auto-populated from models via seed_field_catalog management command.
+    """
+    key = models.CharField(max_length=200, unique=True)  # e.g. "marketing_campaign.spend"
+    label = models.CharField(max_length=200)  # e.g. "Marketing Spend"
+    dataset = models.CharField(max_length=100)  # e.g. "marketing_campaign"
+    orm_path = models.CharField(max_length=300)  # e.g. "spend" or "channel__label"
+    data_type = models.CharField(max_length=50)  # "decimal", "integer", "string", "date", "boolean"
+    synonyms = models.TextField(blank=True, help_text="Comma-separated synonyms for natural language matching")
+    is_enabled = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ["dataset", "label"]
+        indexes = [
+            models.Index(fields=["dataset", "is_enabled"]),
+            models.Index(fields=["is_enabled"]),
+        ]
+
+    def __str__(self):
+        return f"{self.dataset}.{self.label}"

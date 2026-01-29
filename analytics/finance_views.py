@@ -433,10 +433,11 @@ class FinanceCashflowAPIView(APIView):
         # Find cost overrun projects
         for item in budget_vs_actual:
             if item["variance"] > 5:  # More than 5% over budget
+                overrun_cr = item["actual"] - item["budget"]  # already in Cr
                 margin_alerts.append({
                     "type": "cost_overrun",
                     "title": "Cost Overrun",
-                    "value": f"{abs(item['variance'])}%",
+                    "value": f"{overrun_cr:.1f} Cr" if overrun_cr >= 0.01 else f"{abs(item['variance'])}%",
                     "description": f"{item['full_name']} project exceeding budget by {abs(item['variance']):.1f}%",
                     "severity": "high" if item["variance"] > 10 else "medium",
                 })

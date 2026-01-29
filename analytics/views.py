@@ -19,17 +19,24 @@ def get_org(request):
     """
     Multi-tenant org resolution:
     1. Authenticated user with employee_profile.organization → use that (org admin sees only their org).
-    2. Staff/superuser with org_code in query → use that org (admin override for upload/testing).
+    2. Staff/superuser with org_code in query/body → use that org (admin override for upload/testing).
     3. Unauthenticated: org_code from query (dev/testing).
     4. DEBUG: fallback to first organization.
     """
+    def _get_org_code_from_request():
+        """Get org_code from query params or POST body."""
+        org_code = request.query_params.get("org_code")
+        if not org_code and hasattr(request, 'data') and isinstance(request.data, dict):
+            org_code = request.data.get("org_code")
+        return org_code
+
     # 1) Authenticated user: prefer their org (org admin sees only their data)
     if getattr(request.user, "is_authenticated", False):
         emp = getattr(request.user, "employee_profile", None)
         if emp and emp.organization:
             # Staff can override via org_code (e.g. for upload or viewing another org)
             if request.user.is_staff:
-                org_code = request.query_params.get("org_code")
+                org_code = _get_org_code_from_request()
                 if org_code:
                     org = Organization.objects.filter(code=org_code).first()
                     if org:
@@ -37,15 +44,21 @@ def get_org(request):
             return emp.organization
         # Authenticated but no employee profile: staff can still use org_code
         if request.user.is_staff:
-            org_code = request.query_params.get("org_code")
+            org_code = _get_org_code_from_request()
             if org_code:
                 org = Organization.objects.filter(code=org_code).first()
                 if org:
                     return org
+        # Authenticated non-staff without employee profile: check query params as fallback
+        org_code = _get_org_code_from_request()
+        if org_code:
+            org = Organization.objects.filter(code=org_code).first()
+            if org:
+                return org
         return None
 
     # 2) Not authenticated: org_code from query (dev/testing, current frontend behavior)
-    org_code = request.query_params.get("org_code")
+    org_code = _get_org_code_from_request()
     if org_code:
         org = Organization.objects.filter(code=org_code).first()
         if org:
@@ -269,13 +282,27 @@ class ExecutiveOverviewAPIView(APIView):
         # ----------------------------------
         # 3) Revenue trend (monthly line)
         # ----------------------------------
+        # Build date range filter: include all months from start to end (inclusive)
+        date_filter = (
+            Q(year__gt=start.year) | Q(year=start.year, month__gte=start.month)
+        ) & (
+            Q(year__lt=end.year) | Q(year=end.year, month__lte=end.month)
+        )
+        
         months_qs = (
             OrgMonthlySnapshot.objects
             .filter(organization=org)
-            .filter(Q(year__gt=start.year) | Q(year=start.year, month__gte=start.month))
-            .filter(Q(year__lt=end.year) | Q(year=end.year, month__lte=end.month))
+            .filter(date_filter)
             .order_by("year", "month")
         )
+        
+        # If no results with date filter, fallback to all available data (ensures charts show data)
+        if not months_qs.exists():
+            months_qs = (
+                OrgMonthlySnapshot.objects
+                .filter(organization=org)
+                .order_by("year", "month")
+            )
 
         revenue_trend = {
             "x": [f"{m.year}-{str(m.month).zfill(2)}" for m in months_qs],

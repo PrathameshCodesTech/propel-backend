@@ -8,7 +8,7 @@ if defined _OLD_CODEPAGE (
     "%SystemRoot%\System32\chcp.com" 65001 > nul
 )
 
-set VIRTUAL_ENV=C:\Users\Prathmesh Marathe\propel-insights-backend\venv
+set VIRTUAL_ENV=C:\Users\Prathmesh Marathe\propel-insights-app\propel-insights-backend\venv
 
 if not defined PROMPT set PROMPT=$P$G
 

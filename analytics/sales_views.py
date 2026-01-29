@@ -145,7 +145,11 @@ class SalesPerformanceAPIView(APIView):
             # Get sales executives
             sales_executives = Employee.objects.filter(
                 organization=org,
-                role__in=[Employee.Role.SALES_EXECUTIVE, Employee.Role.SALES_MANAGER],
+                role__in=[
+                    Employee.Role.SALES_EXECUTIVE,
+                    Employee.Role.SALES_MANAGER,
+                    Employee.Role.REGIONAL_HEAD,
+                ],
                 is_active=True
             ).select_related("user")
             

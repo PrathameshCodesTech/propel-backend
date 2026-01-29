@@ -139,10 +139,29 @@ class InvestorDashboardAPIView(APIView):
                 "completion_confidence": completion_confidence,
             }
 
-            # Quarterly performance from OrgMonthlySnapshot (last 4 quarters)
+            # Quarterly performance: current quarter + next 3 quarters (so Q2 2025 shows)
             quarterly_performance = []
+            current_q = (today.month - 1) // 3 + 1
+            current_q_start_month = (current_q - 1) * 3 + 1
+            # Use last completed quarter's revenue as run rate for targets when no snapshot data
+            last_q_start = today - relativedelta(months=3)
+            ly, lm = last_q_start.year, last_q_start.month
+            q_start_last = ((lm - 1) // 3) * 3 + 1
+            last_q_agg = OrgMonthlySnapshot.objects.filter(
+                organization=org,
+                year=ly,
+                month__in=[q_start_last, q_start_last + 1, q_start_last + 2],
+            ).aggregate(
+                revenue=Sum("revenue_booked"),
+                realization=Sum("revenue_collected"),
+            )
+            run_rate_revenue = float(last_q_agg["revenue"] or 0)
+            if run_rate_revenue <= 0:
+                run_rate_revenue = (portfolio_value or 0) / 4.0  # fallback: quarter of portfolio
+            run_rate_realization = float(last_q_agg["realization"] or 0)
+
             for i in range(4):
-                d = today - relativedelta(months=3 * (3 - i))
+                d = today + relativedelta(months=3 * i)
                 y, m = d.year, d.month
                 q_start_month = ((m - 1) // 3) * 3 + 1
                 snapshots = OrgMonthlySnapshot.objects.filter(
@@ -156,10 +175,12 @@ class InvestorDashboardAPIView(APIView):
                 )
                 rev = float(agg["revenue"] or 0)
                 real = float(agg["realization"] or 0)
+                # For future quarters with no data, show target so the chart has visible bars
+                target = rev if rev > 0 else run_rate_revenue
                 quarterly_performance.append({
                     "quarter": _quarter_label(y, q_start_month),
-                    "revenue": rev,
-                    "target": rev,
+                    "revenue": rev if rev > 0 else run_rate_revenue,
+                    "target": target,
                     "realization": real,
                 })
 

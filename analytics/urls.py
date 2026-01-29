@@ -10,6 +10,7 @@ from .people_views import PeoplePerformanceAPIView
 from .legal_views import LegalComplianceAPIView
 from .investor_views import InvestorDashboardAPIView
 from .marketing_views import MarketingROIAPIView
+from .ask_views import AskAPIView, SchemaAPIView
 
 urlpatterns = [
     path("executive-overview/", ExecutiveOverviewAPIView.as_view(), name="executive-overview"),
@@ -24,4 +25,6 @@ urlpatterns = [
     path("legal-compliance/", LegalComplianceAPIView.as_view(), name="legal-compliance"),
     path("investor-dashboard/", InvestorDashboardAPIView.as_view(), name="investor-dashboard"),
     path("marketing-roi/", MarketingROIAPIView.as_view(), name="marketing-roi"),
+    path("ask/", AskAPIView.as_view(), name="ask"),
+    path("schema/", SchemaAPIView.as_view(), name="schema"),
 ]
